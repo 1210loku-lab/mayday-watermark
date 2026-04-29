@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>五月天 · 回到那一天 · 北京鸟巢</title>
-<link rel="preconnect" href="https://fonts.googleapis.cn" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.cn/css2?family=ZCOOL+XiaoWei&family=Ma+Shan+Zheng&family=Long+Cang&display=swap">
 <style>
 :root {
   --ashin:#0276ef; --carrot:#FF6B1A; --stone:#4ABF6B;
@@ -861,12 +859,21 @@ function init() {
   buildFontPills();
   buildStrokeColors();
 
-  // Preload web fonts so canvas can render them on mobile
-  Promise.all([
-    document.fonts.load('bold 16px "ZCOOL XiaoWei"'),
-    document.fonts.load('bold 16px "Ma Shan Zheng"'),
-    document.fonts.load('normal 16px "Long Cang"'),
-  ]).then(() => { if (state.photoImg) renderCanvas(); });
+  // Async font load — does NOT block page render; falls back to system fonts if CDN unreachable
+  const fontLink = document.createElement('link');
+  fontLink.rel = 'stylesheet';
+  fontLink.href = 'https://fonts.googleapis.cn/css2?family=ZCOOL+XiaoWei&family=Ma+Shan+Zheng&family=Long+Cang&display=swap';
+  fontLink.onload = () => {
+    Promise.all([
+      document.fonts.load('bold 16px "ZCOOL XiaoWei"'),
+      document.fonts.load('bold 16px "Ma Shan Zheng"'),
+      document.fonts.load('normal 16px "Long Cang"'),
+    ]).then(() => {
+      buildFontPills();
+      if (state.photoImg) renderCanvas();
+    });
+  };
+  document.head.appendChild(fontLink);
 
   // File input
   const fileInput = document.getElementById('file-input');
