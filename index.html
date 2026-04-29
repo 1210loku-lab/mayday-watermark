@@ -345,11 +345,11 @@ body::before{
     <div class="modal-sub">让其他人也能使用这个工具<br>所有照片本地处理 · 不会上传</div>
     <div id="qrcode-container"></div>
     <div class="share-input-row">
-      <label class="share-input-label">分享链接（可编辑）</label>
-      <input class="share-url-input" id="share-url-input" type="text" placeholder="粘贴公开访问链接...">
+      <label class="share-input-label">分享链接</label>
+      <input class="share-url-input" id="share-url-input" type="text" readonly style="cursor:default;">
     </div>
     <div class="share-hint">
-      💡 若要他人通过链接访问，需将 HTML 文件和 assets 文件夹上传至服务器，或在同一局域网内运行本地服务器后分享 IP 链接。
+      💡 扫描二维码即可访问线上版工具，所有照片均在本地处理，不会上传。
     </div>
     <button class="modal-close" id="qr-close">关闭</button>
   </div>
@@ -594,6 +594,7 @@ async function drawDefaultWatermarks(ctx, W, H, dateStr) {
   // Top-right: date + 北京·鸟巢, two lines center-aligned
   {
     const fs = W * 0.038;
+    const fsSmall = W * 0.027;
     const lineH = fs * 1.45;
     // Center point: right portion of image
     const cx = W * 0.79;
@@ -601,12 +602,14 @@ async function drawDefaultWatermarks(ctx, W, H, dateStr) {
     ctx.textAlign = 'center';
     ctx.shadowColor = 'rgba(0,0,0,0.8)';
     ctx.shadowBlur = 10;
-    ctx.font = `700 ${fs}px Georgia, "STSong", serif`;
     ctx.fillStyle = '#fff';
     if (dateStr) {
+      ctx.font = `700 ${fs}px Georgia, "STSong", serif`;
       ctx.fillText(dateStr,  cx, W * 0.07);
+      ctx.font = `${fsSmall}px "STKaiti", "KaiTi", Georgia, serif`;
       ctx.fillText('北京·鸟巢', cx, W * 0.07 + lineH);
     } else {
+      ctx.font = `${fsSmall}px "STKaiti", "KaiTi", Georgia, serif`;
       ctx.fillText('北京·鸟巢', cx, W * 0.07);
     }
     ctx.restore();
@@ -755,19 +758,14 @@ function handleFile(file) {
   reader.onload = e => {
     const img = new Image();
     img.onload = () => {
-      const maxL = 1400;
-      const ratio = img.width / img.height;
-      let W, H;
-      if (ratio >= 1) { W = maxL; H = Math.round(maxL / ratio); }
-      else { H = maxL; W = Math.round(maxL * ratio); }
-      state.photoDim = { w: W, h: H };
+      state.photoDim = { w: img.width, h: img.height };
       state.photoImg = img;
 
       // Show thumb
       document.getElementById('upload-placeholder').style.display = 'none';
       document.getElementById('upload-preview-wrap').style.display = 'block';
       document.getElementById('upload-thumb').src = e.target.result;
-      document.getElementById('upload-status').textContent = `✓ 已上传 · ${W}×${H} · 点击更换`;
+      document.getElementById('upload-status').textContent = `✓ 已上传 · ${img.width}×${img.height} · 点击更换`;
 
       // Show canvas
       document.getElementById('main-canvas').style.display = 'block';
@@ -805,8 +803,8 @@ function handleShare() {
   const modal = document.getElementById('qr-modal');
   modal.style.display = 'flex';
   const urlInput = document.getElementById('share-url-input');
-  if (!urlInput.value) urlInput.value = window.location.href;
-  generateQR(urlInput.value);
+  urlInput.value = 'https://www.mayday-watermark.top/';
+  generateQR('https://www.mayday-watermark.top/');
 }
 
 function generateQR(url) {
@@ -902,10 +900,6 @@ function init() {
       document.getElementById('qr-modal').style.display = 'none';
   });
 
-  // Share URL input → regenerate QR
-  document.getElementById('share-url-input').addEventListener('input', e => {
-    if (e.target.value.startsWith('http')) generateQR(e.target.value);
-  });
 }
 
 init();

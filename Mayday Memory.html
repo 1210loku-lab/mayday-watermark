@@ -148,6 +148,15 @@ body::before{
 .slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:var(--ashin);cursor:pointer;border:2px solid #fff;}
 .slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--ashin);cursor:pointer;border:2px solid #fff;}
 .slider-value{font-size:11px;color:#fff;min-width:36px;text-align:right;}
+.section-label{font-size:11px;color:var(--muted);letter-spacing:1px;margin-top:14px;margin-bottom:6px;}
+.font-pills{display:flex;gap:6px;flex-wrap:wrap;}
+.font-pill{
+  padding:5px 11px;border-radius:100px;font-size:11px;cursor:pointer;
+  border:1px solid var(--border);background:var(--surface);color:var(--muted);
+  transition:all 0.2s;white-space:nowrap;
+}
+.font-pill:hover{border-color:rgba(2,118,239,0.4);color:var(--text);}
+.font-pill.active{border-color:var(--ashin);background:rgba(2,118,239,0.12);color:#fff;}
 .preview-container{
   position:relative;width:100%;border-radius:12px;
   overflow:hidden;background:#000;
@@ -288,6 +297,19 @@ body::before{
         <input class="slider" type="range" id="opacity-slider" min="0.3" max="1" step="0.05" value="1">
         <span class="slider-value" id="opacity-val">100%</span>
       </div>
+      <div class="section-label">字體風格</div>
+      <div class="font-pills" id="font-pills"></div>
+      <div class="section-label">位置調整</div>
+      <div class="slider-row">
+        <span class="slider-label">← 左右 →</span>
+        <input class="slider" type="range" id="offset-x-slider" min="-50" max="50" step="1" value="0">
+        <span class="slider-value" id="offset-x-val">0</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">↑ 上下 ↓</span>
+        <input class="slider" type="range" id="offset-y-slider" min="-50" max="50" step="1" value="0">
+        <span class="slider-value" id="offset-y-val">0</span>
+      </div>
     </div>
 
     <!-- Step 5 -->
@@ -323,11 +345,11 @@ body::before{
     <div class="modal-sub">让其他人也能使用这个工具<br>所有照片本地处理 · 不会上传</div>
     <div id="qrcode-container"></div>
     <div class="share-input-row">
-      <label class="share-input-label">分享链接（可编辑）</label>
-      <input class="share-url-input" id="share-url-input" type="text" placeholder="粘贴公开访问链接...">
+      <label class="share-input-label">分享链接</label>
+      <input class="share-url-input" id="share-url-input" type="text" readonly style="cursor:default;">
     </div>
     <div class="share-hint">
-      💡 若要他人通过链接访问，需将 HTML 文件和 assets 文件夹上传至服务器，或在同一局域网内运行本地服务器后分享 IP 链接。
+      💡 扫描二维码即可访问线上版工具，所有照片均在本地处理，不会上传。
     </div>
     <button class="modal-close" id="qr-close">关闭</button>
   </div>
@@ -383,6 +405,9 @@ let state = {
   showDate: 'd0',
   fontSize: 0.04,
   opacity: 1.0,
+  fontId: 'weibei',
+  textOffsetX: 0,   // percent of W, negative = left
+  textOffsetY: 0,   // percent of H, negative = up
 };
 
 // Image cache
@@ -418,13 +443,6 @@ async function drawBall(ctx, src, cx, cy, r) {
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
-    // Shadow
-    ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
-    ctx.beginPath();
-    ctx.ellipse(cx, cy + r * 0.95, r * 0.65, r * 0.13, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
   } catch(e) {}
 }
 
@@ -455,41 +473,38 @@ async function wmFiveTogether(ctx, W, H) {
   } catch(e) {}
 }
 
-// Watermark: MOJO 与你
+// Watermark: MOJO 与你 — single combined image, sized off short side
 async function wmMojo(ctx, W, H) {
-  const mojos = [
-    { src: 'assets/mojo-carrot.png',    size: 0.22 },
-    { src: 'assets/mojo-strawberry.png',size: 0.18 },
-    { src: 'assets/mojo-apple.png',     size: 0.16 },
-    { src: 'assets/mojo-yakult.png',    size: 0.16 },
-  ];
-  const positions = [
-    { x: 0.04, y: 0.68 },
-    { x: 0.19, y: 0.80 },
-    { x: 0.04, y: 0.86 },
-    { x: 0.23, y: 0.91 },
-  ];
-  for (let i = 0; i < mojos.length; i++) {
-    try {
-      const img = await loadImg(mojos[i].src);
-      const w = W * mojos[i].size;
-      const h = w * (img.height / img.width);
-      ctx.save();
-      ctx.shadowColor = 'rgba(0,0,0,0.4)';
-      ctx.shadowBlur = 8;
-      ctx.drawImage(img, W * positions[i].x, H * positions[i].y - h / 2, w, h);
-      ctx.restore();
-    } catch(e) {}
-  }
+  try {
+    const img = await loadImg('assets/mojo-family-combined.png');
+    const wmW = Math.min(W, H) * 0.58;
+    const wmH = wmW * (img.height / img.width);
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.25)';
+    ctx.shadowBlur = 10;
+    ctx.drawImage(img, W * 0.01, H - wmH - H * 0.01, wmW, wmH);
+    ctx.restore();
+  } catch(e) {}
 }
 
-// Artistic font stack: 魏碑 > 行楷 > 圓體 (with Traditional Chinese variants)
-const ART_FONT = '"STWeiBei","WeiBei SC","FZWeiGBT-M01","STXingkai","Xingkai SC","Baoli SC","STKaiti","KaiTi","PingFang TC",Georgia,serif';
+// Font options: 魏碑 > 行楷 > 圓體 > 粗黑 > Google art fonts
+const FONTS = [
+  { id: 'weibei',  label: '魏碑', css: '"STWeiBei","WeiBei SC","FZWeiGBT-M01",serif',              weight: 'bold'   },
+  { id: 'xingkai', label: '行楷', css: '"STXingkai","Xingkai SC","STKaiti","KaiTi",serif',          weight: 'bold'   },
+  { id: 'baoli',   label: '報隸', css: '"Baoli SC","STBaoli",serif',                                weight: 'normal' },
+  { id: 'yuanti',  label: '圓體', css: '"Yuanti SC","PingFang TC","PingFang SC",sans-serif',        weight: '600'    },
+  { id: 'heiti',   label: '粗黑', css: '"PingFang SC","Heiti SC","Microsoft YaHei",sans-serif',     weight: '900'    },
+];
 
-// Draw text with white fill + carrot stroke (shared by lyrics and message)
-function drawArtText(ctx, lines, startX, startY, lineH, fs, alignCenter, W) {
+function getFont() {
+  return FONTS.find(f => f.id === state.fontId) || FONTS[0];
+}
+
+// Draw text with white fill + carrot stroke — shared by lyrics and message
+function drawArtText(ctx, lines, startX, startY, lineH, fs, alignCenter, W, font) {
+  const f = font || getFont();
   ctx.textBaseline = 'middle';
-  ctx.font = `bold ${fs}px ${ART_FONT}`;
+  ctx.font = `${f.weight} ${fs}px ${f.css}`;
   ctx.textAlign = alignCenter ? 'center' : 'left';
   ctx.strokeStyle = '#FF6B1A';
   ctx.lineWidth = fs * 0.14;
@@ -508,30 +523,55 @@ function drawArtText(ctx, lines, startX, startY, lineH, fs, alignCenter, W) {
   });
 }
 
-// Watermark: 歌詞 — left bottom, 魏碑/行楷 artistic font, white + carrot stroke
+// Watermark: 歌詞 — left bottom, selected font, white + carrot stroke, with offset
 function wmLyrics(ctx, W, H, lyrics, fontSize, opacity) {
   if (!lyrics || !lyrics.trim()) return;
   const lines = lyrics.split('\n').filter(l => l.trim()).slice(0, 4);
   const fs = W * fontSize;
   const lineH = fs * 1.55;
-  const startX = W * 0.05;
-  const startY = H - H * 0.08 - (lines.length - 1) * lineH;
+  const ox = state.textOffsetX * W / 100;
+  const oy = state.textOffsetY * H / 100;
+  const startX = W * 0.05 + ox;
+  const startY = H - H * 0.08 - (lines.length - 1) * lineH + oy;
   ctx.save();
   ctx.globalAlpha = opacity;
-  drawArtText(ctx, lines, startX, startY, lineH, fs, false, W);
+  drawArtText(ctx, lines, startX, startY, lineH, fs, false, W, getFont());
   ctx.restore();
 }
 
-// Custom text (留言) — centered bottom, same artistic style
+// Custom text (留言) — centered bottom, selected font, white + carrot stroke, with offset
 function drawCustomTextCentered(ctx, W, H, text, fontSize, opacity) {
   if (!text || !text.trim()) return;
   const lines = text.split('\n').filter(l => l.trim()).slice(0, 3);
   const fs = W * fontSize;
   const lineH = fs * 1.45;
-  const startY = H - H * 0.06 - (lines.length - 1) * lineH;
+  const ox = state.textOffsetX * W / 100;
+  const oy = state.textOffsetY * H / 100;
+  // centerX shifts with ox; startY shifts with oy
+  const startY = H - H * 0.06 - (lines.length - 1) * lineH + oy;
   ctx.save();
   ctx.globalAlpha = opacity;
-  drawArtText(ctx, lines, W * 0.05, startY, lineH, fs, true, W);
+  // Pass startX as the center offset reference; drawArtText centres on W/2 + ox for center mode
+  const f = getFont();
+  const lines2 = lines;
+  ctx.textBaseline = 'middle';
+  ctx.font = `${f.weight} ${fs}px ${f.css}`;
+  ctx.textAlign = 'center';
+  ctx.strokeStyle = '#FF6B1A';
+  ctx.lineWidth = fs * 0.14;
+  ctx.lineJoin = 'round';
+  ctx.fillStyle = '#fff';
+  lines2.forEach((line, i) => {
+    const x = W / 2 + ox;
+    const y = startY + i * lineH;
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.55)';
+    ctx.shadowBlur = 6;
+    ctx.strokeText(line, x, y);
+    ctx.shadowBlur = 0;
+    ctx.fillText(line, x, y);
+    ctx.restore();
+  });
   ctx.restore();
 }
 
@@ -545,28 +585,40 @@ async function drawDefaultWatermarks(ctx, W, H, dateStr) {
   ctx.font = `900 ${W * 0.048}px Georgia, "STSong", serif`;
   ctx.fillStyle = '#fff';
   ctx.fillText('MAYDAY', W * 0.05, W * 0.075);
-  ctx.font = `${W * 0.022}px "STKaiti", "KaiTi", Georgia, serif`;
-  ctx.fillStyle = '#0276ef';
+  ctx.font = `${W * 0.027}px "STKaiti", "KaiTi", Georgia, serif`;
+  ctx.fillStyle = '#fff';
   ctx.shadowBlur = 6;
-  ctx.fillText('#5525+2  回到那一天', W * 0.05, W * 0.115);
+  ctx.fillText('#5525+2  回到那一天', W * 0.05, W * 0.12);
   ctx.restore();
 
-  // Top-right: date YYYY.MM.DD  DAY N
-  if (dateStr) {
+  // Top-right: date + 北京·鸟巢, two lines center-aligned
+  {
+    const fs = W * 0.038;
+    const fsSmall = W * 0.027;
+    const lineH = fs * 1.45;
+    // Center point: right portion of image
+    const cx = W * 0.79;
     ctx.save();
-    ctx.textAlign = 'right';
+    ctx.textAlign = 'center';
     ctx.shadowColor = 'rgba(0,0,0,0.8)';
     ctx.shadowBlur = 10;
-    ctx.font = `700 ${W * 0.038}px Georgia, "STSong", serif`;
     ctx.fillStyle = '#fff';
-    ctx.fillText(dateStr, W * 0.97, W * 0.075);
+    if (dateStr) {
+      ctx.font = `700 ${fs}px Georgia, "STSong", serif`;
+      ctx.fillText(dateStr,  cx, W * 0.07);
+      ctx.font = `${fsSmall}px "STKaiti", "KaiTi", Georgia, serif`;
+      ctx.fillText('北京·鸟巢', cx, W * 0.07 + lineH);
+    } else {
+      ctx.font = `${fsSmall}px "STKaiti", "KaiTi", Georgia, serif`;
+      ctx.fillText('北京·鸟巢', cx, W * 0.07);
+    }
     ctx.restore();
   }
 
   // Bottom-right: MAYDAYLAND logo, pushed to extreme corner
   try {
     const logo = await loadImg('assets/MAYDAYLAND.png');
-    const logoW = W * 0.28;
+    const logoW = W * 0.36;
     const logoH = logoW * (logo.height / logo.width);
     ctx.save();
     ctx.shadowColor = 'rgba(0,0,0,0.5)';
@@ -682,6 +734,22 @@ function updateTextStep() {
     ? '每行一句，最多4行\n例：这是全天下最完美的阵容'
     : '例：今晚我踏进鸟巢了！';
   ta.value = isLyrics ? state.lyrics : state.message;
+  buildFontPills();
+}
+
+function buildFontPills() {
+  const container = document.getElementById('font-pills');
+  container.innerHTML = FONTS.map(f => `
+    <button class="font-pill${state.fontId === f.id ? ' active' : ''}" data-id="${f.id}"
+      style="font-family:${f.css}">${f.label}</button>
+  `).join('');
+  container.querySelectorAll('.font-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.fontId = btn.dataset.id;
+      buildFontPills();
+      renderCanvas();
+    });
+  });
 }
 
 function handleFile(file) {
@@ -690,19 +758,14 @@ function handleFile(file) {
   reader.onload = e => {
     const img = new Image();
     img.onload = () => {
-      const maxL = 1400;
-      const ratio = img.width / img.height;
-      let W, H;
-      if (ratio >= 1) { W = maxL; H = Math.round(maxL / ratio); }
-      else { H = maxL; W = Math.round(maxL * ratio); }
-      state.photoDim = { w: W, h: H };
+      state.photoDim = { w: img.width, h: img.height };
       state.photoImg = img;
 
       // Show thumb
       document.getElementById('upload-placeholder').style.display = 'none';
       document.getElementById('upload-preview-wrap').style.display = 'block';
       document.getElementById('upload-thumb').src = e.target.result;
-      document.getElementById('upload-status').textContent = `✓ 已上传 · ${W}×${H} · 点击更换`;
+      document.getElementById('upload-status').textContent = `✓ 已上传 · ${img.width}×${img.height} · 点击更换`;
 
       // Show canvas
       document.getElementById('main-canvas').style.display = 'block';
@@ -740,8 +803,8 @@ function handleShare() {
   const modal = document.getElementById('qr-modal');
   modal.style.display = 'flex';
   const urlInput = document.getElementById('share-url-input');
-  if (!urlInput.value) urlInput.value = window.location.href;
-  generateQR(urlInput.value);
+  urlInput.value = 'https://www.mayday-watermark.top/';
+  generateQR('https://www.mayday-watermark.top/');
 }
 
 function generateQR(url) {
@@ -762,6 +825,7 @@ function init() {
   buildHeroBalls();
   buildDateSelect();
   buildFrameGrid();
+  buildFontPills();
 
   // File input
   const fileInput = document.getElementById('file-input');
@@ -807,6 +871,20 @@ function init() {
     renderCanvas();
   });
 
+  // Offset X slider
+  document.getElementById('offset-x-slider').addEventListener('input', e => {
+    state.textOffsetX = parseInt(e.target.value);
+    document.getElementById('offset-x-val').textContent = state.textOffsetX;
+    renderCanvas();
+  });
+
+  // Offset Y slider
+  document.getElementById('offset-y-slider').addEventListener('input', e => {
+    state.textOffsetY = parseInt(e.target.value);
+    document.getElementById('offset-y-val').textContent = state.textOffsetY;
+    renderCanvas();
+  });
+
   // Download
   document.getElementById('download-btn').addEventListener('click', handleDownload);
 
@@ -822,10 +900,6 @@ function init() {
       document.getElementById('qr-modal').style.display = 'none';
   });
 
-  // Share URL input → regenerate QR
-  document.getElementById('share-url-input').addEventListener('input', e => {
-    if (e.target.value.startsWith('http')) generateQR(e.target.value);
-  });
 }
 
 init();
