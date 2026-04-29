@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>五月天 · 回到那一天 · 北京鸟巢</title>
+<link href="https://fonts.googleapis.cn/css2?family=ZCOOL+KuaiLe&family=ZCOOL+QingKe+HuangYou&family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
 <style>
 :root {
   --ashin:#0276ef; --carrot:#FF6B1A; --stone:#4ABF6B;
@@ -148,6 +149,15 @@ body::before{
 .slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:var(--ashin);cursor:pointer;border:2px solid #fff;}
 .slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--ashin);cursor:pointer;border:2px solid #fff;}
 .slider-value{font-size:11px;color:#fff;min-width:36px;text-align:right;}
+.section-label{font-size:11px;color:var(--muted);letter-spacing:1px;margin-top:14px;margin-bottom:6px;}
+.font-pills{display:flex;gap:6px;flex-wrap:wrap;}
+.font-pill{
+  padding:5px 11px;border-radius:100px;font-size:11px;cursor:pointer;
+  border:1px solid var(--border);background:var(--surface);color:var(--muted);
+  transition:all 0.2s;white-space:nowrap;
+}
+.font-pill:hover{border-color:rgba(2,118,239,0.4);color:var(--text);}
+.font-pill.active{border-color:var(--ashin);background:rgba(2,118,239,0.12);color:#fff;}
 .preview-container{
   position:relative;width:100%;border-radius:12px;
   overflow:hidden;background:#000;
@@ -288,6 +298,19 @@ body::before{
         <input class="slider" type="range" id="opacity-slider" min="0.3" max="1" step="0.05" value="1">
         <span class="slider-value" id="opacity-val">100%</span>
       </div>
+      <div class="section-label">字體風格</div>
+      <div class="font-pills" id="font-pills"></div>
+      <div class="section-label">位置調整</div>
+      <div class="slider-row">
+        <span class="slider-label">← 左右 →</span>
+        <input class="slider" type="range" id="offset-x-slider" min="-30" max="30" step="1" value="0">
+        <span class="slider-value" id="offset-x-val">0</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">↑ 上下 ↓</span>
+        <input class="slider" type="range" id="offset-y-slider" min="-30" max="30" step="1" value="0">
+        <span class="slider-value" id="offset-y-val">0</span>
+      </div>
     </div>
 
     <!-- Step 5 -->
@@ -383,6 +406,9 @@ let state = {
   showDate: 'd0',
   fontSize: 0.04,
   opacity: 1.0,
+  fontId: 'weibei',
+  textOffsetX: 0,   // percent of W, negative = left
+  textOffsetY: 0,   // percent of H, negative = up
 };
 
 // Image cache
@@ -455,41 +481,72 @@ async function wmFiveTogether(ctx, W, H) {
   } catch(e) {}
 }
 
-// Watermark: MOJO 与你
+// Watermark: MOJO 与你 — 2-column compact cluster, size based on min(W,H)
 async function wmMojo(ctx, W, H) {
-  const mojos = [
-    { src: 'assets/mojo-carrot.png',    size: 0.22 },
-    { src: 'assets/mojo-strawberry.png',size: 0.18 },
-    { src: 'assets/mojo-apple.png',     size: 0.16 },
-    { src: 'assets/mojo-yakult.png',    size: 0.16 },
+  const srcs = [
+    'assets/mojo-carrot.png',
+    'assets/mojo-strawberry.png',
+    'assets/mojo-apple.png',
+    'assets/mojo-yakult.png',
   ];
-  const positions = [
-    { x: 0.04, y: 0.68 },
-    { x: 0.19, y: 0.80 },
-    { x: 0.04, y: 0.86 },
-    { x: 0.23, y: 0.91 },
+  const imgs = await Promise.all(srcs.map(s => loadImg(s).catch(() => null)));
+
+  // Scale off the short side so the cluster stays consistent in both orientations
+  const ref = Math.min(W, H);
+  const wList = [ref * 0.20, ref * 0.17, ref * 0.14, ref * 0.14];
+  const hList = imgs.map((img, i) => img ? wList[i] * (img.height / img.width) : wList[i]);
+
+  // 2-column layout anchored to bottom-left
+  const mg   = W * 0.025;
+  const colX1 = mg + wList[0] + W * 0.01; // left col: items 0 (carrot) + 2 (apple)
+                                            // right col: items 1 (strawberry) + 3 (yakult)
+  const baseY = H - H * 0.03;
+
+  // Row A (bottom): carrot left, strawberry right (slightly higher for visual balance)
+  const y0 = baseY - hList[0];
+  const y1 = baseY - hList[1] - hList[0] * 0.08;
+
+  // Row B (above): apple over carrot, yakult over strawberry
+  const y2 = y0 - hList[2] * 0.88;
+  const y3 = y1 - hList[3] * 0.88;
+
+  const draws = [
+    { img: imgs[0], x: mg,               y: y0, w: wList[0], h: hList[0] },
+    { img: imgs[1], x: colX1,            y: y1, w: wList[1], h: hList[1] },
+    { img: imgs[2], x: mg + wList[0]*0.05, y: y2, w: wList[2], h: hList[2] },
+    { img: imgs[3], x: colX1 + wList[1]*0.05, y: y3, w: wList[3], h: hList[3] },
   ];
-  for (let i = 0; i < mojos.length; i++) {
-    try {
-      const img = await loadImg(mojos[i].src);
-      const w = W * mojos[i].size;
-      const h = w * (img.height / img.width);
-      ctx.save();
-      ctx.shadowColor = 'rgba(0,0,0,0.4)';
-      ctx.shadowBlur = 8;
-      ctx.drawImage(img, W * positions[i].x, H * positions[i].y - h / 2, w, h);
-      ctx.restore();
-    } catch(e) {}
+
+  for (const d of draws) {
+    if (!d.img) continue;
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.4)';
+    ctx.shadowBlur = 8;
+    ctx.drawImage(d.img, d.x, d.y, d.w, d.h);
+    ctx.restore();
   }
 }
 
-// Artistic font stack: 魏碑 > 行楷 > 圓體 (with Traditional Chinese variants)
-const ART_FONT = '"STWeiBei","WeiBei SC","FZWeiGBT-M01","STXingkai","Xingkai SC","Baoli SC","STKaiti","KaiTi","PingFang TC",Georgia,serif';
+// Font options: 魏碑 > 行楷 > 圓體 > 粗黑 > Google art fonts
+const FONTS = [
+  { id: 'weibei',   label: '魏碑',    css: '"STWeiBei","WeiBei SC","FZWeiGBT-M01",serif',          weight: 'bold'   },
+  { id: 'xingkai',  label: '行楷',    css: '"STXingkai","Xingkai SC","STKaiti","KaiTi",serif',      weight: 'bold'   },
+  { id: 'yuanti',   label: '圓體',    css: '"Yuanti SC","PingFang TC","PingFang SC",sans-serif',    weight: '600'    },
+  { id: 'heiti',    label: '粗黑',    css: '"PingFang SC","Heiti SC","Microsoft YaHei",sans-serif', weight: '900'    },
+  { id: 'kuaile',   label: 'KuaiLe', css: '"ZCOOL KuaiLe","STKaiti",sans-serif',                   weight: 'normal' },
+  { id: 'huangyou', label: '黃油體',  css: '"ZCOOL QingKe HuangYou","STKaiti",sans-serif',          weight: 'normal' },
+  { id: 'mashan',   label: '馬善正',  css: '"Ma Shan Zheng","STKaiti",serif',                       weight: 'normal' },
+];
 
-// Draw text with white fill + carrot stroke (shared by lyrics and message)
-function drawArtText(ctx, lines, startX, startY, lineH, fs, alignCenter, W) {
+function getFont() {
+  return FONTS.find(f => f.id === state.fontId) || FONTS[0];
+}
+
+// Draw text with white fill + carrot stroke — shared by lyrics and message
+function drawArtText(ctx, lines, startX, startY, lineH, fs, alignCenter, W, font) {
+  const f = font || getFont();
   ctx.textBaseline = 'middle';
-  ctx.font = `bold ${fs}px ${ART_FONT}`;
+  ctx.font = `${f.weight} ${fs}px ${f.css}`;
   ctx.textAlign = alignCenter ? 'center' : 'left';
   ctx.strokeStyle = '#FF6B1A';
   ctx.lineWidth = fs * 0.14;
@@ -508,30 +565,55 @@ function drawArtText(ctx, lines, startX, startY, lineH, fs, alignCenter, W) {
   });
 }
 
-// Watermark: 歌詞 — left bottom, 魏碑/行楷 artistic font, white + carrot stroke
+// Watermark: 歌詞 — left bottom, selected font, white + carrot stroke, with offset
 function wmLyrics(ctx, W, H, lyrics, fontSize, opacity) {
   if (!lyrics || !lyrics.trim()) return;
   const lines = lyrics.split('\n').filter(l => l.trim()).slice(0, 4);
   const fs = W * fontSize;
   const lineH = fs * 1.55;
-  const startX = W * 0.05;
-  const startY = H - H * 0.08 - (lines.length - 1) * lineH;
+  const ox = state.textOffsetX * W / 100;
+  const oy = state.textOffsetY * H / 100;
+  const startX = W * 0.05 + ox;
+  const startY = H - H * 0.08 - (lines.length - 1) * lineH + oy;
   ctx.save();
   ctx.globalAlpha = opacity;
-  drawArtText(ctx, lines, startX, startY, lineH, fs, false, W);
+  drawArtText(ctx, lines, startX, startY, lineH, fs, false, W, getFont());
   ctx.restore();
 }
 
-// Custom text (留言) — centered bottom, same artistic style
+// Custom text (留言) — centered bottom, selected font, white + carrot stroke, with offset
 function drawCustomTextCentered(ctx, W, H, text, fontSize, opacity) {
   if (!text || !text.trim()) return;
   const lines = text.split('\n').filter(l => l.trim()).slice(0, 3);
   const fs = W * fontSize;
   const lineH = fs * 1.45;
-  const startY = H - H * 0.06 - (lines.length - 1) * lineH;
+  const ox = state.textOffsetX * W / 100;
+  const oy = state.textOffsetY * H / 100;
+  // centerX shifts with ox; startY shifts with oy
+  const startY = H - H * 0.06 - (lines.length - 1) * lineH + oy;
   ctx.save();
   ctx.globalAlpha = opacity;
-  drawArtText(ctx, lines, W * 0.05, startY, lineH, fs, true, W);
+  // Pass startX as the center offset reference; drawArtText centres on W/2 + ox for center mode
+  const f = getFont();
+  const lines2 = lines;
+  ctx.textBaseline = 'middle';
+  ctx.font = `${f.weight} ${fs}px ${f.css}`;
+  ctx.textAlign = 'center';
+  ctx.strokeStyle = '#FF6B1A';
+  ctx.lineWidth = fs * 0.14;
+  ctx.lineJoin = 'round';
+  ctx.fillStyle = '#fff';
+  lines2.forEach((line, i) => {
+    const x = W / 2 + ox;
+    const y = startY + i * lineH;
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.55)';
+    ctx.shadowBlur = 6;
+    ctx.strokeText(line, x, y);
+    ctx.shadowBlur = 0;
+    ctx.fillText(line, x, y);
+    ctx.restore();
+  });
   ctx.restore();
 }
 
@@ -546,7 +628,7 @@ async function drawDefaultWatermarks(ctx, W, H, dateStr) {
   ctx.fillStyle = '#fff';
   ctx.fillText('MAYDAY', W * 0.05, W * 0.075);
   ctx.font = `${W * 0.022}px "STKaiti", "KaiTi", Georgia, serif`;
-  ctx.fillStyle = '#0276ef';
+  ctx.fillStyle = '#fff';
   ctx.shadowBlur = 6;
   ctx.fillText('#5525+2  回到那一天', W * 0.05, W * 0.115);
   ctx.restore();
@@ -566,7 +648,7 @@ async function drawDefaultWatermarks(ctx, W, H, dateStr) {
   // Bottom-right: MAYDAYLAND logo, pushed to extreme corner
   try {
     const logo = await loadImg('assets/MAYDAYLAND.png');
-    const logoW = W * 0.28;
+    const logoW = W * 0.36;
     const logoH = logoW * (logo.height / logo.width);
     ctx.save();
     ctx.shadowColor = 'rgba(0,0,0,0.5)';
@@ -682,6 +764,22 @@ function updateTextStep() {
     ? '每行一句，最多4行\n例：这是全天下最完美的阵容'
     : '例：今晚我踏进鸟巢了！';
   ta.value = isLyrics ? state.lyrics : state.message;
+  buildFontPills();
+}
+
+function buildFontPills() {
+  const container = document.getElementById('font-pills');
+  container.innerHTML = FONTS.map(f => `
+    <button class="font-pill${state.fontId === f.id ? ' active' : ''}" data-id="${f.id}"
+      style="font-family:${f.css}">${f.label}</button>
+  `).join('');
+  container.querySelectorAll('.font-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.fontId = btn.dataset.id;
+      buildFontPills();
+      renderCanvas();
+    });
+  });
 }
 
 function handleFile(file) {
@@ -762,6 +860,7 @@ function init() {
   buildHeroBalls();
   buildDateSelect();
   buildFrameGrid();
+  buildFontPills();
 
   // File input
   const fileInput = document.getElementById('file-input');
@@ -804,6 +903,20 @@ function init() {
   opSlider.addEventListener('input', e => {
     state.opacity = parseFloat(e.target.value);
     document.getElementById('opacity-val').textContent = Math.round(state.opacity * 100) + '%';
+    renderCanvas();
+  });
+
+  // Offset X slider
+  document.getElementById('offset-x-slider').addEventListener('input', e => {
+    state.textOffsetX = parseInt(e.target.value);
+    document.getElementById('offset-x-val').textContent = state.textOffsetX;
+    renderCanvas();
+  });
+
+  // Offset Y slider
+  document.getElementById('offset-y-slider').addEventListener('input', e => {
+    state.textOffsetY = parseInt(e.target.value);
+    document.getElementById('offset-y-val').textContent = state.textOffsetY;
     renderCanvas();
   });
 
