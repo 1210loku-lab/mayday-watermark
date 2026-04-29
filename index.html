@@ -495,11 +495,11 @@ async function wmMojo(ctx, W, H) {
 
 // Font options: 魏碑 > 行楷 > 圓體 > 粗黑 > Google art fonts
 const FONTS = [
-  { id: 'weibei',  label: '魏碑', css: '"ZCOOL XiaoWei","STWeiBei","WeiBei SC",serif',              weight: 'bold'   },
-  { id: 'xingkai', label: '行楷', css: '"Ma Shan Zheng","STXingkai","Xingkai SC","STKaiti",cursive',weight: 'bold'   },
-  { id: 'baoli',   label: '報隸', css: '"Long Cang","Baoli SC","STBaoli",serif',                    weight: 'normal' },
-  { id: 'yuanti',  label: '圓體', css: '"Yuanti SC","PingFang TC","PingFang SC",sans-serif',        weight: '600'    },
-  { id: 'heiti',   label: '粗黑', css: '"PingFang SC","Heiti SC","Microsoft YaHei",sans-serif',     weight: '900'    },
+  { id: 'weibei',  label: '楷體', css: '"Kaiti SC","STKaiti","KaiTi","楷体",cursive',                              weight: 'bold'   },
+  { id: 'xingkai', label: '宋體', css: '"Songti SC","STSong","宋体","Noto Serif CJK SC","SimSun",serif',            weight: 'bold'   },
+  { id: 'baoli',   label: '細黑', css: '"PingFang SC","Heiti SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif', weight: '300'    },
+  { id: 'yuanti',  label: '圓體', css: '"PingFang SC","Heiti SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif', weight: '600'    },
+  { id: 'heiti',   label: '粗黑', css: '"PingFang SC","Heiti SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif', weight: '900'    },
 ];
 
 const STROKE_COLORS = [
@@ -858,22 +858,6 @@ function init() {
   buildFrameGrid();
   buildFontPills();
   buildStrokeColors();
-
-  // Async font load — does NOT block page render; falls back to system fonts if CDN unreachable
-  const fontLink = document.createElement('link');
-  fontLink.rel = 'stylesheet';
-  fontLink.href = 'https://fonts.googleapis.cn/css2?family=ZCOOL+XiaoWei&family=Ma+Shan+Zheng&family=Long+Cang&display=swap';
-  fontLink.onload = () => {
-    Promise.all([
-      document.fonts.load('bold 16px "ZCOOL XiaoWei"'),
-      document.fonts.load('bold 16px "Ma Shan Zheng"'),
-      document.fonts.load('normal 16px "Long Cang"'),
-    ]).then(() => {
-      buildFontPills();
-      if (state.photoImg) renderCanvas();
-    });
-  };
-  document.head.appendChild(fontLink);
 
   // File input
   const fileInput = document.getElementById('file-input');
