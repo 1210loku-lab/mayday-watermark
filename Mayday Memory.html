@@ -341,7 +341,7 @@ body::before{
 <!-- QR Modal -->
 <div class="modal-overlay" id="qr-modal" style="display:none">
   <div class="modal-box" id="qr-box">
-    <div class="modal-title">📱 扫码分享给粉丝</div>
+    <div class="modal-title">🥕将QR Code/链接🔗分享给其他WMLS🥕</div>
     <div class="modal-sub">让其他人也能使用这个工具<br>所有照片本地处理 · 不会上传</div>
     <div id="qrcode-container"></div>
     <div class="share-input-row">
@@ -349,7 +349,7 @@ body::before{
       <input class="share-url-input" id="share-url-input" type="text" readonly style="cursor:default;">
     </div>
     <div class="share-hint">
-      💡 扫描二维码即可访问线上版工具，所有照片均在本地处理，不会上传。
+      我！们！是！五！月！天！Have Fun in MAYDAYLAND
     </div>
     <button class="modal-close" id="qr-close">关闭</button>
   </div>
@@ -431,7 +431,7 @@ async function drawBall(ctx, src, cx, cy, r) {
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.clip();
-    ctx.drawImage(img, cx - r, cy - r, r * 2, r * 2);
+    ctx.drawImage(img, cx - r - 1, cy - r - 1, r * 2 + 2, r * 2 + 2);
     ctx.restore();
     // Shine overlay
     ctx.save();
@@ -605,12 +605,12 @@ async function drawDefaultWatermarks(ctx, W, H, dateStr) {
     ctx.fillStyle = '#fff';
     if (dateStr) {
       ctx.font = `700 ${fs}px Georgia, "STSong", serif`;
-      ctx.fillText(dateStr,  cx, W * 0.07);
+      ctx.fillText(dateStr,  cx, W * 0.075);
       ctx.font = `${fsSmall}px "STKaiti", "KaiTi", Georgia, serif`;
-      ctx.fillText('北京·鸟巢', cx, W * 0.07 + lineH);
+      ctx.fillText('北京·鸟巢', cx, W * 0.12);
     } else {
       ctx.font = `${fsSmall}px "STKaiti", "KaiTi", Georgia, serif`;
-      ctx.fillText('北京·鸟巢', cx, W * 0.07);
+      ctx.fillText('北京·鸟巢', cx, W * 0.12);
     }
     ctx.restore();
   }
