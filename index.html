@@ -410,7 +410,7 @@ let state = {
   showDate: 'd0',
   fontSize: 0.04,
   opacity: 1.0,
-  fontId: 'weibei',
+  fontId: 'xiaowei',
   strokeColor: '#FF6B1A',
   textOffsetX: 0,   // percent of W, negative = left
   textOffsetY: 0,   // percent of H, negative = up
@@ -493,13 +493,18 @@ async function wmMojo(ctx, W, H) {
   } catch(e) {}
 }
 
-// Font options: 魏碑 > 行楷 > 圓體 > 粗黑 > Google art fonts
+// Web fonts loaded async from loli.net (Chinese CDN, no VPN needed)
+// System fonts serve as immediate fallback while web fonts load
+const WEB_FONTS_URL = 'https://fonts.loli.net/css2?family=ZCOOL+XiaoWei&family=Ma+Shan+Zheng&family=Long+Cang&family=Zhi+Mang+Xing&family=Liu+Jian+Mao+Cao&display=swap';
+
 const FONTS = [
-  { id: 'weibei',  label: '楷體', css: '"Kaiti SC","STKaiti","KaiTi","楷体",cursive',                              weight: 'bold'   },
-  { id: 'xingkai', label: '宋體', css: '"Songti SC","STSong","宋体","Noto Serif CJK SC","SimSun",serif',            weight: 'bold'   },
-  { id: 'baoli',   label: '細黑', css: '"PingFang SC","Heiti SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif', weight: '300'    },
-  { id: 'yuanti',  label: '圓體', css: '"PingFang SC","Heiti SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif', weight: '600'    },
-  { id: 'heiti',   label: '粗黑', css: '"PingFang SC","Heiti SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif', weight: '900'    },
+  { id: 'xiaowei',     label: '小薇',  css: '"ZCOOL XiaoWei","Kaiti SC","STKaiti",serif',             weight: 'bold'   },
+  { id: 'mashanzheng', label: '行楷',  css: '"Ma Shan Zheng","Kaiti SC","STKaiti",cursive',            weight: 'normal' },
+  { id: 'longcang',    label: '龍藏',  css: '"Long Cang","Songti SC","STSong",serif',                  weight: 'normal' },
+  { id: 'zhimang',     label: '毛筆',  css: '"Zhi Mang Xing","Kaiti SC",cursive',                     weight: 'normal' },
+  { id: 'liujian',     label: '墨草',  css: '"Liu Jian Mao Cao","Kaiti SC",cursive',                   weight: 'normal' },
+  { id: 'yuanti',      label: '圓體',  css: '"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif', weight: '600' },
+  { id: 'heiti',       label: '粗黑',  css: '"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif', weight: '900' },
 ];
 
 const STROKE_COLORS = [
@@ -667,6 +672,10 @@ async function renderCanvas() {
   canvas.height = H;
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, W, H);
+
+  // Ensure the currently selected web font is ready in canvas before drawing
+  const f = getFont();
+  try { await document.fonts.load(`${f.weight} 48px ${f.css}`); } catch(e) {}
 
   // Photo (cover fill)
   const scale = Math.max(W / state.photoImg.width, H / state.photoImg.height);
@@ -858,6 +867,24 @@ function init() {
   buildFrameGrid();
   buildFontPills();
   buildStrokeColors();
+
+  // Load web fonts async from Chinese CDN (loli.net → gstatic.loli.net).
+  // Page is already interactive; fonts upgrade in background when ready.
+  (function loadWebFonts() {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = WEB_FONTS_URL;
+    link.onload = () => {
+      const toLoad = FONTS.slice(0, 5).map(f =>
+        document.fonts.load(`${f.weight} 48px ${f.css}`)
+      );
+      Promise.all(toLoad).then(() => {
+        buildFontPills();           // update pills to show loaded fonts
+        if (state.photoImg) renderCanvas();
+      }).catch(() => {});
+    };
+    document.head.appendChild(link);
+  })();
 
   // File input
   const fileInput = document.getElementById('file-input');
