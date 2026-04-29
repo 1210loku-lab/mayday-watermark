@@ -1,0 +1,7 @@
+.DS_Store
+素材库/
+uploads/
+_本地存档/
+assets/_archive/
+assets/.DS_Store
+*.DS_Store
