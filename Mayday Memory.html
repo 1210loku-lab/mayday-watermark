@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>五月天 · 回到那一天 · 北京鸟巢</title>
+<link rel="preconnect" href="https://fonts.googleapis.cn" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.cn/css2?family=ZCOOL+XiaoWei&family=Ma+Shan+Zheng&family=Long+Cang&display=swap">
 <style>
 :root {
   --ashin:#0276ef; --carrot:#FF6B1A; --stone:#4ABF6B;
@@ -150,6 +152,9 @@ body::before{
 .slider-value{font-size:11px;color:#fff;min-width:36px;text-align:right;}
 .section-label{font-size:11px;color:var(--muted);letter-spacing:1px;margin-top:14px;margin-bottom:6px;}
 .font-pills{display:flex;gap:6px;flex-wrap:wrap;}
+.stroke-colors{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;}
+.stroke-color-dot{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2.5px solid transparent;transition:transform 0.15s,border-color 0.15s;box-shadow:0 1px 4px rgba(0,0,0,0.4);}
+.stroke-color-dot.active{border-color:#fff;transform:scale(1.2);}
 .font-pill{
   padding:5px 11px;border-radius:100px;font-size:11px;cursor:pointer;
   border:1px solid var(--border);background:var(--surface);color:var(--muted);
@@ -299,6 +304,8 @@ body::before{
       </div>
       <div class="section-label">字體風格</div>
       <div class="font-pills" id="font-pills"></div>
+      <div class="section-label">描邊顏色</div>
+      <div class="stroke-colors" id="stroke-colors"></div>
       <div class="section-label">位置調整</div>
       <div class="slider-row">
         <span class="slider-label">← 左右 →</span>
@@ -406,6 +413,7 @@ let state = {
   fontSize: 0.04,
   opacity: 1.0,
   fontId: 'weibei',
+  strokeColor: '#FF6B1A',
   textOffsetX: 0,   // percent of W, negative = left
   textOffsetY: 0,   // percent of H, negative = up
 };
@@ -489,11 +497,20 @@ async function wmMojo(ctx, W, H) {
 
 // Font options: 魏碑 > 行楷 > 圓體 > 粗黑 > Google art fonts
 const FONTS = [
-  { id: 'weibei',  label: '魏碑', css: '"STWeiBei","WeiBei SC","FZWeiGBT-M01",serif',              weight: 'bold'   },
-  { id: 'xingkai', label: '行楷', css: '"STXingkai","Xingkai SC","STKaiti","KaiTi",serif',          weight: 'bold'   },
-  { id: 'baoli',   label: '報隸', css: '"Baoli SC","STBaoli",serif',                                weight: 'normal' },
+  { id: 'weibei',  label: '魏碑', css: '"ZCOOL XiaoWei","STWeiBei","WeiBei SC",serif',              weight: 'bold'   },
+  { id: 'xingkai', label: '行楷', css: '"Ma Shan Zheng","STXingkai","Xingkai SC","STKaiti",cursive',weight: 'bold'   },
+  { id: 'baoli',   label: '報隸', css: '"Long Cang","Baoli SC","STBaoli",serif',                    weight: 'normal' },
   { id: 'yuanti',  label: '圓體', css: '"Yuanti SC","PingFang TC","PingFang SC",sans-serif',        weight: '600'    },
   { id: 'heiti',   label: '粗黑', css: '"PingFang SC","Heiti SC","Microsoft YaHei",sans-serif',     weight: '900'    },
+];
+
+const STROKE_COLORS = [
+  { label: '胡萝卜', color: '#FF6B1A' },
+  { label: '冠佑蓝', color: '#3DB7E4' },
+  { label: '玛莎黄', color: '#FFC83D' },
+  { label: '阿信粉', color: '#FF6BA9' },
+  { label: '怪兽红', color: '#E94B3D' },
+  { label: '石头绿', color: '#4ABF6B' },
 ];
 
 function getFont() {
@@ -506,7 +523,7 @@ function drawArtText(ctx, lines, startX, startY, lineH, fs, alignCenter, W, font
   ctx.textBaseline = 'middle';
   ctx.font = `${f.weight} ${fs}px ${f.css}`;
   ctx.textAlign = alignCenter ? 'center' : 'left';
-  ctx.strokeStyle = '#FF6B1A';
+  ctx.strokeStyle = state.strokeColor;
   ctx.lineWidth = fs * 0.14;
   ctx.lineJoin = 'round';
   ctx.fillStyle = '#fff';
@@ -557,7 +574,7 @@ function drawCustomTextCentered(ctx, W, H, text, fontSize, opacity) {
   ctx.textBaseline = 'middle';
   ctx.font = `${f.weight} ${fs}px ${f.css}`;
   ctx.textAlign = 'center';
-  ctx.strokeStyle = '#FF6B1A';
+  ctx.strokeStyle = state.strokeColor;
   ctx.lineWidth = fs * 0.14;
   ctx.lineJoin = 'round';
   ctx.fillStyle = '#fff';
@@ -752,6 +769,22 @@ function buildFontPills() {
   });
 }
 
+function buildStrokeColors() {
+  const container = document.getElementById('stroke-colors');
+  container.innerHTML = STROKE_COLORS.map(c => `
+    <div class="stroke-color-dot${state.strokeColor === c.color ? ' active' : ''}"
+      data-color="${c.color}" title="${c.label}"
+      style="background:${c.color}"></div>
+  `).join('');
+  container.querySelectorAll('.stroke-color-dot').forEach(dot => {
+    dot.addEventListener('click', () => {
+      state.strokeColor = dot.dataset.color;
+      buildStrokeColors();
+      renderCanvas();
+    });
+  });
+}
+
 function handleFile(file) {
   if (!file || !file.type.startsWith('image/')) return;
   const reader = new FileReader();
@@ -826,6 +859,14 @@ function init() {
   buildDateSelect();
   buildFrameGrid();
   buildFontPills();
+  buildStrokeColors();
+
+  // Preload web fonts so canvas can render them on mobile
+  Promise.all([
+    document.fonts.load('bold 16px "ZCOOL XiaoWei"'),
+    document.fonts.load('bold 16px "Ma Shan Zheng"'),
+    document.fonts.load('normal 16px "Long Cang"'),
+  ]).then(() => { if (state.photoImg) renderCanvas(); });
 
   // File input
   const fileInput = document.getElementById('file-input');
