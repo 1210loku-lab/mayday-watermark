@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>五月天 · 回到那一天 · 北京鸟巢</title>
-<link href="https://fonts.googleapis.cn/css2?family=ZCOOL+KuaiLe&family=ZCOOL+QingKe+HuangYou&family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
 <style>
 :root {
   --ashin:#0276ef; --carrot:#FF6B1A; --stone:#4ABF6B;
@@ -303,12 +302,12 @@ body::before{
       <div class="section-label">位置調整</div>
       <div class="slider-row">
         <span class="slider-label">← 左右 →</span>
-        <input class="slider" type="range" id="offset-x-slider" min="-30" max="30" step="1" value="0">
+        <input class="slider" type="range" id="offset-x-slider" min="-50" max="50" step="1" value="0">
         <span class="slider-value" id="offset-x-val">0</span>
       </div>
       <div class="slider-row">
         <span class="slider-label">↑ 上下 ↓</span>
-        <input class="slider" type="range" id="offset-y-slider" min="-30" max="30" step="1" value="0">
+        <input class="slider" type="range" id="offset-y-slider" min="-50" max="50" step="1" value="0">
         <span class="slider-value" id="offset-y-val">0</span>
       </div>
     </div>
@@ -444,13 +443,6 @@ async function drawBall(ctx, src, cx, cy, r) {
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
-    // Shadow
-    ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
-    ctx.beginPath();
-    ctx.ellipse(cx, cy + r * 0.95, r * 0.65, r * 0.13, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
   } catch(e) {}
 }
 
@@ -481,61 +473,27 @@ async function wmFiveTogether(ctx, W, H) {
   } catch(e) {}
 }
 
-// Watermark: MOJO 与你 — 2-column compact cluster, size based on min(W,H)
+// Watermark: MOJO 与你 — single combined image, sized off short side
 async function wmMojo(ctx, W, H) {
-  const srcs = [
-    'assets/mojo-carrot.png',
-    'assets/mojo-strawberry.png',
-    'assets/mojo-apple.png',
-    'assets/mojo-yakult.png',
-  ];
-  const imgs = await Promise.all(srcs.map(s => loadImg(s).catch(() => null)));
-
-  // Scale off the short side so the cluster stays consistent in both orientations
-  const ref = Math.min(W, H);
-  const wList = [ref * 0.20, ref * 0.17, ref * 0.14, ref * 0.14];
-  const hList = imgs.map((img, i) => img ? wList[i] * (img.height / img.width) : wList[i]);
-
-  // 2-column layout anchored to bottom-left
-  const mg   = W * 0.025;
-  const colX1 = mg + wList[0] + W * 0.01; // left col: items 0 (carrot) + 2 (apple)
-                                            // right col: items 1 (strawberry) + 3 (yakult)
-  const baseY = H - H * 0.03;
-
-  // Row A (bottom): carrot left, strawberry right (slightly higher for visual balance)
-  const y0 = baseY - hList[0];
-  const y1 = baseY - hList[1] - hList[0] * 0.08;
-
-  // Row B (above): apple over carrot, yakult over strawberry
-  const y2 = y0 - hList[2] * 0.88;
-  const y3 = y1 - hList[3] * 0.88;
-
-  const draws = [
-    { img: imgs[0], x: mg,               y: y0, w: wList[0], h: hList[0] },
-    { img: imgs[1], x: colX1,            y: y1, w: wList[1], h: hList[1] },
-    { img: imgs[2], x: mg + wList[0]*0.05, y: y2, w: wList[2], h: hList[2] },
-    { img: imgs[3], x: colX1 + wList[1]*0.05, y: y3, w: wList[3], h: hList[3] },
-  ];
-
-  for (const d of draws) {
-    if (!d.img) continue;
+  try {
+    const img = await loadImg('assets/mojo-family-combined.png');
+    const wmW = Math.min(W, H) * 0.58;
+    const wmH = wmW * (img.height / img.width);
     ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.4)';
-    ctx.shadowBlur = 8;
-    ctx.drawImage(d.img, d.x, d.y, d.w, d.h);
+    ctx.shadowColor = 'rgba(0,0,0,0.25)';
+    ctx.shadowBlur = 10;
+    ctx.drawImage(img, W * 0.01, H - wmH - H * 0.01, wmW, wmH);
     ctx.restore();
-  }
+  } catch(e) {}
 }
 
 // Font options: 魏碑 > 行楷 > 圓體 > 粗黑 > Google art fonts
 const FONTS = [
-  { id: 'weibei',   label: '魏碑',    css: '"STWeiBei","WeiBei SC","FZWeiGBT-M01",serif',          weight: 'bold'   },
-  { id: 'xingkai',  label: '行楷',    css: '"STXingkai","Xingkai SC","STKaiti","KaiTi",serif',      weight: 'bold'   },
-  { id: 'yuanti',   label: '圓體',    css: '"Yuanti SC","PingFang TC","PingFang SC",sans-serif',    weight: '600'    },
-  { id: 'heiti',    label: '粗黑',    css: '"PingFang SC","Heiti SC","Microsoft YaHei",sans-serif', weight: '900'    },
-  { id: 'kuaile',   label: 'KuaiLe', css: '"ZCOOL KuaiLe","STKaiti",sans-serif',                   weight: 'normal' },
-  { id: 'huangyou', label: '黃油體',  css: '"ZCOOL QingKe HuangYou","STKaiti",sans-serif',          weight: 'normal' },
-  { id: 'mashan',   label: '馬善正',  css: '"Ma Shan Zheng","STKaiti",serif',                       weight: 'normal' },
+  { id: 'weibei',  label: '魏碑', css: '"STWeiBei","WeiBei SC","FZWeiGBT-M01",serif',              weight: 'bold'   },
+  { id: 'xingkai', label: '行楷', css: '"STXingkai","Xingkai SC","STKaiti","KaiTi",serif',          weight: 'bold'   },
+  { id: 'baoli',   label: '報隸', css: '"Baoli SC","STBaoli",serif',                                weight: 'normal' },
+  { id: 'yuanti',  label: '圓體', css: '"Yuanti SC","PingFang TC","PingFang SC",sans-serif',        weight: '600'    },
+  { id: 'heiti',   label: '粗黑', css: '"PingFang SC","Heiti SC","Microsoft YaHei",sans-serif',     weight: '900'    },
 ];
 
 function getFont() {
@@ -627,21 +585,30 @@ async function drawDefaultWatermarks(ctx, W, H, dateStr) {
   ctx.font = `900 ${W * 0.048}px Georgia, "STSong", serif`;
   ctx.fillStyle = '#fff';
   ctx.fillText('MAYDAY', W * 0.05, W * 0.075);
-  ctx.font = `${W * 0.022}px "STKaiti", "KaiTi", Georgia, serif`;
+  ctx.font = `${W * 0.027}px "STKaiti", "KaiTi", Georgia, serif`;
   ctx.fillStyle = '#fff';
   ctx.shadowBlur = 6;
-  ctx.fillText('#5525+2  回到那一天', W * 0.05, W * 0.115);
+  ctx.fillText('#5525+2  回到那一天', W * 0.05, W * 0.12);
   ctx.restore();
 
-  // Top-right: date YYYY.MM.DD  DAY N
-  if (dateStr) {
+  // Top-right: date + 北京·鸟巢, two lines center-aligned
+  {
+    const fs = W * 0.038;
+    const lineH = fs * 1.45;
+    // Center point: right portion of image
+    const cx = W * 0.79;
     ctx.save();
-    ctx.textAlign = 'right';
+    ctx.textAlign = 'center';
     ctx.shadowColor = 'rgba(0,0,0,0.8)';
     ctx.shadowBlur = 10;
-    ctx.font = `700 ${W * 0.038}px Georgia, "STSong", serif`;
+    ctx.font = `700 ${fs}px Georgia, "STSong", serif`;
     ctx.fillStyle = '#fff';
-    ctx.fillText(dateStr, W * 0.97, W * 0.075);
+    if (dateStr) {
+      ctx.fillText(dateStr,  cx, W * 0.07);
+      ctx.fillText('北京·鸟巢', cx, W * 0.07 + lineH);
+    } else {
+      ctx.fillText('北京·鸟巢', cx, W * 0.07);
+    }
     ctx.restore();
   }
 
