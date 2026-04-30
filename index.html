@@ -113,6 +113,23 @@ body::before{
 .upload-preview{max-height:80px;max-width:100%;border-radius:8px;object-fit:cover;}
 .upload-status{font-size:12px;color:var(--ashin);margin-top:8px;}
 .frame-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.ashin-variant-picker{margin-top:10px;display:none;}
+.ashin-variant-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.ashin-variant-option{
+  border:2px solid var(--border);border-radius:10px;padding:8px 6px;
+  cursor:pointer;transition:all 0.2s;background:var(--surface);
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+}
+.ashin-variant-option:hover{border-color:rgba(255,255,255,0.2);}
+.ashin-variant-option.active{border-color:var(--ashin);background:rgba(2,118,239,0.08);}
+.ashin-variant-preview{
+  width:100%;aspect-ratio:1/1;border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;background:#000;
+}
+.ashin-variant-preview img{width:100%;height:100%;object-fit:contain;}
+.ashin-variant-name{font-size:10px;color:var(--muted);font-weight:500;}
+.ashin-variant-option.active .ashin-variant-name{color:#fff;}
 .frame-option{
   border:2px solid var(--border);border-radius:10px;padding:10px;
   cursor:pointer;transition:all 0.2s;background:var(--surface);
@@ -280,6 +297,10 @@ body::before{
     <div class="step-card">
       <div class="step-label"><span class="step-num">3</span><span class="step-title">选择左下水印风格</span></div>
       <div class="frame-grid" id="frame-grid"></div>
+      <div class="ashin-variant-picker" id="ashin-variant-picker">
+        <div style="font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:6px;font-weight:500;">选择签名款式</div>
+        <div class="ashin-variant-grid" id="ashin-variant-grid"></div>
+      </div>
     </div>
 
     <!-- Step 4 -->
@@ -383,7 +404,14 @@ const FRAMES = [
   { id: 'mojo',        name: 'MOJO 与你', preview: 'assets/mojo-carrot.png' },
   { id: 'maijiabu',   name: '麦克卜',     preview: 'assets/maijiabu-topic.png' },
   { id: 'srbj',       name: 'SR·BJ',     preview: 'assets/sr-bj-topic.png' },
+  { id: 'ashin',      name: '阿信签',     preview: 'assets/ashin-topic.png' },
   { id: 'lyrics',      name: '歌词水印',   preview: null },
+];
+
+const ASHIN_VARIANTS = [
+  { id: '1', name: '款式一', src: 'assets/ashin-1.png' },
+  { id: '2', name: '款式二', src: 'assets/ashin-2.png' },
+  { id: '3', name: '款式三', src: 'assets/ashin-3.png' },
 ];
 
 const SHOW_DATES = [
@@ -416,6 +444,7 @@ let state = {
   strokeColor: '#FF6B1A',
   textOffsetX: 0,   // percent of W, negative = left
   textOffsetY: 0,   // percent of H, negative = up
+  ashinVariant: '1',
 };
 
 // Image cache
@@ -514,6 +543,21 @@ async function wmSRBJ(ctx, W, H) {
   try {
     const img = await loadImg('assets/sr-bj.png');
     const wmW = Math.min(W, H) * 0.55;
+    const wmH = wmW * (img.height / img.width);
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.25)';
+    ctx.shadowBlur = 10;
+    ctx.drawImage(img, W * 0.01, H - wmH - H * 0.01, wmW, wmH);
+    ctx.restore();
+  } catch(e) {}
+}
+
+// Watermark: 阿信签 (3 variants)
+async function wmAshin(ctx, W, H) {
+  const variant = ASHIN_VARIANTS.find(v => v.id === state.ashinVariant) || ASHIN_VARIANTS[0];
+  try {
+    const img = await loadImg(variant.src);
+    const wmW = Math.min(W, H) * 0.50;
     const wmH = wmW * (img.height / img.width);
     ctx.save();
     ctx.shadowColor = 'rgba(0,0,0,0.25)';
@@ -728,6 +772,7 @@ async function renderCanvas() {
   else if (frame === 'mojo')    await wmMojo(ctx, W, H);
   else if (frame === 'maijiabu') await wmMaijiabu(ctx, W, H);
   else if (frame === 'srbj')    await wmSRBJ(ctx, W, H);
+  else if (frame === 'ashin')   await wmAshin(ctx, W, H);
   else if (frame === 'lyrics')  wmLyrics(ctx, W, H, lyrics, fontSize, opacity);
 
   // Custom message: center bottom (only for non-lyrics frames)
@@ -773,6 +818,33 @@ function buildFrameGrid() {
       state.frame = el.dataset.id;
       updateTextStep();
       buildFrameGrid();
+      buildAshinVariantGrid();
+      renderCanvas();
+    });
+  });
+  // Show/hide ashin variant picker
+  const picker = document.getElementById('ashin-variant-picker');
+  picker.style.display = state.frame === 'ashin' ? 'block' : 'none';
+}
+
+// Build ashin variant sub-selector
+function buildAshinVariantGrid() {
+  const picker = document.getElementById('ashin-variant-picker');
+  picker.style.display = state.frame === 'ashin' ? 'block' : 'none';
+  if (state.frame !== 'ashin') return;
+  const grid = document.getElementById('ashin-variant-grid');
+  grid.innerHTML = ASHIN_VARIANTS.map(v => `
+    <div class="ashin-variant-option${state.ashinVariant === v.id ? ' active' : ''}" data-id="${v.id}">
+      <div class="ashin-variant-preview">
+        <img src="${v.src}" alt="${v.name}">
+      </div>
+      <span class="ashin-variant-name">${v.name}</span>
+    </div>
+  `).join('');
+  grid.querySelectorAll('.ashin-variant-option').forEach(el => {
+    el.addEventListener('click', () => {
+      state.ashinVariant = el.dataset.id;
+      buildAshinVariantGrid();
       renderCanvas();
     });
   });
@@ -896,6 +968,7 @@ function init() {
   buildHeroBalls();
   buildDateSelect();
   buildFrameGrid();
+  buildAshinVariantGrid();
   buildFontPills();
   buildStrokeColors();
 
