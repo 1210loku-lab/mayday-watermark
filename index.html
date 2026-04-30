@@ -381,6 +381,8 @@ const FRAMES = [
   { id: 'five',        name: '五球狂欢',   preview: 'assets/ball-pink.png' },
   { id: 'fiveTogether',name: '五球合体',   preview: 'assets/balls-together.png' },
   { id: 'mojo',        name: 'MOJO 与你', preview: 'assets/mojo-carrot.png' },
+  { id: 'maijiabu',   name: '麦克卜',     preview: 'assets/maijiabu-topic.png' },
+  { id: 'srbj',       name: 'SR·BJ',     preview: 'assets/sr-bj-topic.png' },
   { id: 'lyrics',      name: '歌词水印',   preview: null },
 ];
 
@@ -484,6 +486,34 @@ async function wmMojo(ctx, W, H) {
   try {
     const img = await loadImg('assets/mojo-family-combined.png');
     const wmW = Math.min(W, H) * 0.58;
+    const wmH = wmW * (img.height / img.width);
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.25)';
+    ctx.shadowBlur = 10;
+    ctx.drawImage(img, W * 0.01, H - wmH - H * 0.01, wmW, wmH);
+    ctx.restore();
+  } catch(e) {}
+}
+
+// Watermark: 麦克卜
+async function wmMaijiabu(ctx, W, H) {
+  try {
+    const img = await loadImg('assets/maijiabu.png');
+    const wmW = Math.min(W, H) * 0.55;
+    const wmH = wmW * (img.height / img.width);
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.25)';
+    ctx.shadowBlur = 10;
+    ctx.drawImage(img, W * 0.01, H - wmH - H * 0.01, wmW, wmH);
+    ctx.restore();
+  } catch(e) {}
+}
+
+// Watermark: SR·BJ
+async function wmSRBJ(ctx, W, H) {
+  try {
+    const img = await loadImg('assets/sr-bj.png');
+    const wmW = Math.min(W, H) * 0.55;
     const wmH = wmW * (img.height / img.width);
     ctx.save();
     ctx.shadowColor = 'rgba(0,0,0,0.25)';
@@ -696,6 +726,8 @@ async function renderCanvas() {
   if (frame === 'five')         await wmFive(ctx, W, H);
   else if (frame === 'fiveTogether') await wmFiveTogether(ctx, W, H);
   else if (frame === 'mojo')    await wmMojo(ctx, W, H);
+  else if (frame === 'maijiabu') await wmMaijiabu(ctx, W, H);
+  else if (frame === 'srbj')    await wmSRBJ(ctx, W, H);
   else if (frame === 'lyrics')  wmLyrics(ctx, W, H, lyrics, fontSize, opacity);
 
   // Custom message: center bottom (only for non-lyrics frames)
