@@ -301,6 +301,31 @@ body::before{
         <div style="font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:6px;font-weight:500;">选择签名款式</div>
         <div class="ashin-variant-grid" id="ashin-variant-grid"></div>
       </div>
+      <!-- Frame watermark adjust (hidden for lyrics) -->
+      <div id="frame-adjust" style="display:none">
+        <div class="section-label">大小 / 透明度</div>
+        <div class="slider-row">
+          <span class="slider-label">缩放</span>
+          <input class="slider" type="range" id="frame-scale-slider" min="0.3" max="2.0" step="0.05" value="1.0">
+          <span class="slider-value" id="frame-scale-val">100%</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">透明度</span>
+          <input class="slider" type="range" id="frame-opacity-slider" min="0.1" max="1" step="0.05" value="1">
+          <span class="slider-value" id="frame-opacity-val">100%</span>
+        </div>
+        <div class="section-label">位置調整</div>
+        <div class="slider-row">
+          <span class="slider-label">← 左右 →</span>
+          <input class="slider" type="range" id="frame-offset-x-slider" min="-50" max="50" step="1" value="0">
+          <span class="slider-value" id="frame-offset-x-val">0</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">↑ 上下 ↓</span>
+          <input class="slider" type="range" id="frame-offset-y-slider" min="-50" max="50" step="1" value="0">
+          <span class="slider-value" id="frame-offset-y-val">0</span>
+        </div>
+      </div>
     </div>
 
     <!-- Step 4 -->
@@ -445,6 +470,10 @@ let state = {
   textOffsetX: 0,   // percent of W, negative = left
   textOffsetY: 0,   // percent of H, negative = up
   ashinVariant: '1',
+  frameScale: 1.0,    // left-bottom watermark scale multiplier
+  frameOpacity: 1.0,  // left-bottom watermark opacity
+  frameOffsetX: 0,    // percent of W
+  frameOffsetY: 0,    // percent of H
 };
 
 // Image cache
@@ -485,27 +514,37 @@ async function drawBall(ctx, src, cx, cy, r) {
 
 // Watermark: 五球狂欢 (蓝黄粉红绿)
 async function wmFive(ctx, W, H) {
-  const r = W * 0.048;
+  const sc = state.frameScale;
+  const ox = state.frameOffsetX * W / 100;
+  const oy = state.frameOffsetY * H / 100;
+  const r = W * 0.048 * sc;
   const gap = r * 2.25;
-  const startX = W * 0.05 + r;
-  const y = H - H * 0.09;
+  const startX = W * 0.05 * sc + r + ox;
+  const y = H - H * 0.09 * sc + oy;
+  ctx.save();
+  ctx.globalAlpha = state.frameOpacity;
   for (let i = 0; i < MEMBERS.length; i++) {
     const x = startX + gap * i;
     const yOff = (i % 2 === 0 ? -r * 0.15 : r * 0.15);
     await drawBall(ctx, MEMBERS[i].img, x, y + yOff, r);
   }
+  ctx.restore();
 }
 
 // Watermark: 五球合体
 async function wmFiveTogether(ctx, W, H) {
   try {
     const img = await loadImg('assets/balls-together.png');
-    const wmW = W * 0.34;
+    const sc = state.frameScale;
+    const ox = state.frameOffsetX * W / 100;
+    const oy = state.frameOffsetY * H / 100;
+    const wmW = W * 0.34 * sc;
     const wmH = wmW * (img.height / img.width);
     ctx.save();
+    ctx.globalAlpha = state.frameOpacity;
     ctx.shadowColor = 'rgba(0,0,0,0.5)';
     ctx.shadowBlur = 12;
-    ctx.drawImage(img, W * 0.01, H - wmH - H * 0.02, wmW, wmH);
+    ctx.drawImage(img, W * 0.01 + ox, H - wmH - H * 0.02 + oy, wmW, wmH);
     ctx.restore();
   } catch(e) {}
 }
@@ -514,12 +553,16 @@ async function wmFiveTogether(ctx, W, H) {
 async function wmMojo(ctx, W, H) {
   try {
     const img = await loadImg('assets/mojo-family-combined.png');
-    const wmW = Math.min(W, H) * 0.58;
+    const sc = state.frameScale;
+    const ox = state.frameOffsetX * W / 100;
+    const oy = state.frameOffsetY * H / 100;
+    const wmW = Math.min(W, H) * 0.58 * sc;
     const wmH = wmW * (img.height / img.width);
     ctx.save();
+    ctx.globalAlpha = state.frameOpacity;
     ctx.shadowColor = 'rgba(0,0,0,0.25)';
     ctx.shadowBlur = 10;
-    ctx.drawImage(img, W * 0.01, H - wmH - H * 0.01, wmW, wmH);
+    ctx.drawImage(img, W * 0.01 + ox, H - wmH - H * 0.01 + oy, wmW, wmH);
     ctx.restore();
   } catch(e) {}
 }
@@ -528,12 +571,16 @@ async function wmMojo(ctx, W, H) {
 async function wmMaijiabu(ctx, W, H) {
   try {
     const img = await loadImg('assets/maijiabu.png');
-    const wmW = Math.min(W, H) * 0.55;
+    const sc = state.frameScale;
+    const ox = state.frameOffsetX * W / 100;
+    const oy = state.frameOffsetY * H / 100;
+    const wmW = Math.min(W, H) * 0.55 * sc;
     const wmH = wmW * (img.height / img.width);
     ctx.save();
+    ctx.globalAlpha = state.frameOpacity;
     ctx.shadowColor = 'rgba(0,0,0,0.25)';
     ctx.shadowBlur = 10;
-    ctx.drawImage(img, W * 0.01, H - wmH - H * 0.01, wmW, wmH);
+    ctx.drawImage(img, W * 0.01 + ox, H - wmH - H * 0.01 + oy, wmW, wmH);
     ctx.restore();
   } catch(e) {}
 }
@@ -542,12 +589,16 @@ async function wmMaijiabu(ctx, W, H) {
 async function wmSRBJ(ctx, W, H) {
   try {
     const img = await loadImg('assets/sr-bj.png');
-    const wmW = Math.min(W, H) * 0.44;
+    const sc = state.frameScale;
+    const ox = state.frameOffsetX * W / 100;
+    const oy = state.frameOffsetY * H / 100;
+    const wmW = Math.min(W, H) * 0.44 * sc;
     const wmH = wmW * (img.height / img.width);
     ctx.save();
+    ctx.globalAlpha = state.frameOpacity;
     ctx.shadowColor = 'rgba(0,0,0,0.25)';
     ctx.shadowBlur = 10;
-    ctx.drawImage(img, W * 0.01, H - wmH - H * 0.01, wmW, wmH);
+    ctx.drawImage(img, W * 0.01 + ox, H - wmH - H * 0.01 + oy, wmW, wmH);
     ctx.restore();
   } catch(e) {}
 }
@@ -557,12 +608,16 @@ async function wmAshin(ctx, W, H) {
   const variant = ASHIN_VARIANTS.find(v => v.id === state.ashinVariant) || ASHIN_VARIANTS[0];
   try {
     const img = await loadImg(variant.src);
-    const wmW = Math.min(W, H) * 0.50;
+    const sc = state.frameScale;
+    const ox = state.frameOffsetX * W / 100;
+    const oy = state.frameOffsetY * H / 100;
+    const wmW = Math.min(W, H) * 0.50 * sc;
     const wmH = wmW * (img.height / img.width);
     ctx.save();
+    ctx.globalAlpha = state.frameOpacity;
     ctx.shadowColor = 'rgba(0,0,0,0.25)';
     ctx.shadowBlur = 10;
-    ctx.drawImage(img, W * 0.01, H - wmH - H * 0.01, wmW, wmH);
+    ctx.drawImage(img, W * 0.01 + ox, H - wmH - H * 0.01 + oy, wmW, wmH);
     ctx.restore();
   } catch(e) {}
 }
@@ -822,6 +877,9 @@ function buildFrameGrid() {
   // Show/hide ashin variant picker
   const picker = document.getElementById('ashin-variant-picker');
   picker.style.display = state.frame === 'ashin' ? 'block' : 'none';
+  // Show/hide frame adjust panel (hidden for lyrics)
+  const adj = document.getElementById('frame-adjust');
+  adj.style.display = state.frame === 'lyrics' ? 'none' : 'block';
 }
 
 // Build ashin variant sub-selector
@@ -1042,6 +1100,34 @@ function init() {
   document.getElementById('offset-y-slider').addEventListener('input', e => {
     state.textOffsetY = parseInt(e.target.value);
     document.getElementById('offset-y-val').textContent = state.textOffsetY;
+    renderCanvas();
+  });
+
+  // Frame watermark: scale slider
+  document.getElementById('frame-scale-slider').addEventListener('input', e => {
+    state.frameScale = parseFloat(e.target.value);
+    document.getElementById('frame-scale-val').textContent = Math.round(state.frameScale * 100) + '%';
+    renderCanvas();
+  });
+
+  // Frame watermark: opacity slider
+  document.getElementById('frame-opacity-slider').addEventListener('input', e => {
+    state.frameOpacity = parseFloat(e.target.value);
+    document.getElementById('frame-opacity-val').textContent = Math.round(state.frameOpacity * 100) + '%';
+    renderCanvas();
+  });
+
+  // Frame watermark: offset X slider
+  document.getElementById('frame-offset-x-slider').addEventListener('input', e => {
+    state.frameOffsetX = parseInt(e.target.value);
+    document.getElementById('frame-offset-x-val').textContent = state.frameOffsetX;
+    renderCanvas();
+  });
+
+  // Frame watermark: offset Y slider
+  document.getElementById('frame-offset-y-slider').addEventListener('input', e => {
+    state.frameOffsetY = parseInt(e.target.value);
+    document.getElementById('frame-offset-y-val').textContent = state.frameOffsetY;
     renderCanvas();
   });
 
