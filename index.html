@@ -542,7 +542,7 @@ async function wmMaijiabu(ctx, W, H) {
 async function wmSRBJ(ctx, W, H) {
   try {
     const img = await loadImg('assets/sr-bj.png');
-    const wmW = Math.min(W, H) * 0.55;
+    const wmW = Math.min(W, H) * 0.44;
     const wmH = wmW * (img.height / img.width);
     ctx.save();
     ctx.shadowColor = 'rgba(0,0,0,0.25)';
@@ -699,9 +699,6 @@ async function drawDefaultWatermarks(ctx, W, H, dateStr) {
     if (dateStr) {
       ctx.font = `700 ${fs}px Georgia, "STSong", serif`;
       ctx.fillText(dateStr,  cx, W * 0.075);
-      ctx.font = `${fsSmall}px "STKaiti", "KaiTi", Georgia, serif`;
-      ctx.fillText('北京·鸟巢', cx, W * 0.12);
-    } else {
       ctx.font = `${fsSmall}px "STKaiti", "KaiTi", Georgia, serif`;
       ctx.fillText('北京·鸟巢', cx, W * 0.12);
     }
